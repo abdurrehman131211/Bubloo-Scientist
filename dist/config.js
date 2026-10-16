@@ -1,2 +1,2 @@
 // Publishable key only. Never put a Supabase secret/service-role key here.
-window.SITE_CONFIG = {supabaseUrl:"",publishableKey:""};
+window.SITE_CONFIG = {supabaseUrl:"https://kmruzyadvdngqsszsphw.supabase.co",publishableKey:"sb_publishable_jZFZDBGBsdpNf2EzDYBUzQ_JhBc92iE",contactToken:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcnV6eWFkdmRuZ3Fzc3pzcGh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMzE2NjYsImV4cCI6MjEwNzcwNzY2Nn0.obQqq2Be7oCQ2KdxJUwozGFrF7y6StaNA3CieVEo-Dc"};

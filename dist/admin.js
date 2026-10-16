@@ -3,9 +3,10 @@ const cfg=window.SITE_CONFIG,$=s=>document.querySelector(s);
 let token=""; // Access token stays in memory; sign-in required after reload.
 const status=message=>$("#status").textContent=message;
 async function api(path,options={}){
- const response=await fetch(cfg.supabaseUrl+path,{...options,headers:{apikey:cfg.publishableKey,Authorization:"Bearer "+token,"Content-Type":"application/json",...options.headers}});
+ const response=await fetch(cfg.supabaseUrl+path,{...options,headers:{apikey:cfg.publishableKey,...(token?{Authorization:"Bearer "+token}:{}),"Content-Type":"application/json",...options.headers}});
  if(!response.ok){if(response.status===401)signOut();throw Error("Request failed. Check your connection and editor permissions.")}
- return response.status===204?null:response.json();
+ const body=await response.text();
+ return body?JSON.parse(body):null;
 }
 function element(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 async function load(){

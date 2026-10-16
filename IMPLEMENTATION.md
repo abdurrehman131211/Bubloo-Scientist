@@ -1,33 +1,52 @@
-# Bubloo Scientist replica — work in progress
+# Bubloo Scientist implementation status
 
-## What is implemented
-- Responsive frontend in dist, search, category filters, accessible article dialog, team and contact sections.
-- Supabase REST integration with explicit unconfigured/error states.
-- Editor login, article draft/publish/edit/delete, and private message listing.
-- Database schema in backend/schema.sql: RLS on every exposed table, public published-only reads, administrator writes based on app_metadata.
+## Connected backend
+- Project: Bubloo Scientist Website (kmruzyadvdngqsszsphw).
+- Region: ap-south-1. Creation cost quoted by Supabase: $0/month.
+- Frontend configuration uses the public publishable key. A legacy public anon JWT is used only for the contact Edge Function gateway; no server secret is committed.
+- Articles use row-level security: visitors read published articles; only administrators manage drafts and content.
+- Messages are private. Direct public inserts are revoked.
+- The deployed contact Edge Function validates submissions and uses a server-only database operation. Limits: 3 messages per normalized email per hour and 100 total per hour.
+- Security advisor: no findings at implementation time.
 
-## Current limits
-- Branding is a provisional navy/cyan direction. The attached 223×204 logo could not be downloaded because the host cannot resolve external addresses. The original logo has NOT been substituted or recreated.
-- Four preview excerpts are paraphrased from the original site's home page; full article bodies, creative pages, entrepreneurship pages, quizzes and chatbot have NOT been migrated.
-- No live Supabase project has been provisioned: cost lookup is unavailable.
-- No build, browser QA, database integration tests, deployment or GitHub push has succeeded yet.
-- The original Vinext starter is retained outside dist. Hosting uses only dist.
+## Editor account
+No editor account exists yet. Create your account with a password you choose in:
+https://supabase.com/dashboard/project/kmruzyadvdngqsszsphw/auth/users
 
-## Local preview
-Run: python -m http.server 4173 --directory dist
-Open http://localhost:4173
-No package installation is required for this static frontend.
+Then run this in Supabase SQL Editor, replacing the UUID with that exact account ID:
 
-## Connect the backend
-1. Provision the new project in the Bubloo Scientist organization after confirming current cost.
-2. Apply backend/schema.sql.
-3. Set supabaseUrl and publishableKey in dist/config.js. Never add a secret/service-role key.
-4. Create the editor account in Supabase Auth; assign app_metadata.role=admin through a trusted administrator operation. Refresh/sign in again after role changes.
-5. Run anonymous and authenticated policy tests: drafts must be hidden from public/nonadmin users, nonadmins cannot write articles or read messages, admins can manage content.
-6. Before public launch, put contact submissions behind server-side rate limiting and bot verification. This draft currently permits direct public inserts with database validation.
-7. Add the original logo at dist/logo.png and replace the temporary text wordmark after verifying visual theme.
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data,'{}'::jsonb) || '{"role":"admin"}'::jsonb
+    where id = 'YOUR-ACCOUNT-UUID'::uuid;
 
-## Intended delivery
+Sign in at /admin.html. Account creation and this role assignment happen in the trusted dashboard, never in public browser code.
+Sessions stay in memory; sign in again after reload or token expiry.
+
+## Reproduce backend setup
+Apply these in order to a new project:
+1. backend/schema.sql
+2. backend/contact.sql
+3. backend/privileges.sql
+Deploy backend/functions/contact/index.ts as the contact Edge Function with JWT verification enabled.
+Update dist/config.js with that project's public keys and URL.
+
+## Validation
+- node --check passes for the frontend scripts.
+- node backend/tests/contact.mjs checks validation, honeypot, method restrictions, and rate-limit responses with a mocked upstream.
+- backend/tests/access.sql passed against the live database: public visibility, private message protection, administrator writes, and contact limits. Test fixtures were rolled back.
+- End-to-end HTTP/browser checks are unverified because the host's network access is blocked.
+
+## Remaining work
+- Apply the supplied logo and verify the theme: attachment download remains blocked.
+- Migrate full articles and remaining original pages. The database is intentionally not populated with invented content.
+- Create the editor account as above.
+- Deploy the frontend. Sites source-server DNS remains blocked.
+- Add CAPTCHA if needed for stronger abuse resistance; email/global submission limits are already active.
+
+## Run locally
+python -m http.server 4173 --directory dist
+
+Open http://localhost:4173. No dependency installation is needed.
+
 Figma: https://www.figma.com/design/URSxSZeUYE962Yry6zeEhK
-Sites project: appgprj_6ad11c282a608191adb012ef919fd3e4
-Requested GitHub target: new abdurrehman131211/bubloo-scientist repository.
+GitHub: https://github.com/abdurrehman131211/Bubloo-Scientist
