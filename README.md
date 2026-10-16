@@ -30,4 +30,6 @@ Supabase provides published articles, verified-owner editing, and private rate-l
 
 ## Pending
 
-Original logo asset integration, complete WordPress migration, owner password/email verification, and frontend deployment. Sites publishing remains blocked by source-server DNS.
+Complete WordPress migration, owner password/email verification, and frontend deployment. Sites publishing remains blocked by source-server DNS.
+
+The uploaded original logo is integrated in the responsive header and footer across all nine public pages.

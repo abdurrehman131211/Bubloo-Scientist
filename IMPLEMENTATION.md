@@ -47,7 +47,7 @@ Update dist/config.js with that project's public keys and URL.
 - Run python scripts/build-pages.py after changing content/pages.json or the shared header.
 
 ## Remaining work
-- Apply the supplied logo and verify the theme: attachment download remains blocked.
+- The original uploaded logo is integrated into the responsive header and footer on all nine public pages. Browser visual QA remains unverified.
 - Import the complete WordPress archive; current live articles are labeled summaries.
 - The owner must choose their editor password and verify the email as above.
 - Deploy the frontend. Sites source-server DNS remains blocked.
