@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const storage=()=>{const data=new Map();return {getItem:key=>data.get(key)||null,setItem:(k,v)=>data.set(k,v),removeItem:key=>data.delete(key)}};
+const localStorage=storage(),sessionStorage=storage();let calls=0,status=200;
+const context={window:{},navigator:{locks:{request:(_key,fn)=>fn()}},localStorage,sessionStorage,Date,JSON,Error,fetch:async()=>{calls++;return {ok:status===200,status,json:async()=>({access_token:'renewed',refresh_token:'rotated',expires_in:3600,user:{id:'user'}})}}};
+vm.runInNewContext(fs.readFileSync('dist/studio-session.js','utf8'),context);
+const Session=context.window.StudioSession,session=new Session({supabaseUrl:'https://test.invalid',publishableKey:'public'});
+session.save({access_token:'initial',refresh_token:'refresh',expires_in:3600,user:{id:'user'}},true);
+const restored=new Session(session.config);assert.equal(restored.restore().access_token,'initial');assert.equal(await restored.access(),'initial');assert.equal(calls,0);
+restored.value.expires_at=1;localStorage.setItem(restored.key,JSON.stringify(restored.value));
+assert.deepEqual(await Promise.all([restored.access(),restored.access(),restored.access()]),['renewed','renewed','renewed']);assert.equal(calls,1);assert.equal(JSON.parse(localStorage.getItem(restored.key)).refresh_token,'rotated');
+restored.clear();assert.equal(new Session(session.config).restore(),null);
+session.save({access_token:'tab-only',refresh_token:'refresh',expires_in:3600},false);assert.equal(localStorage.getItem(session.key),null);assert.ok(sessionStorage.getItem(session.key));
+session.value.expires_at=1;sessionStorage.setItem(session.key,JSON.stringify(session.value));status=400;await assert.rejects(()=>session.access(),/expired/);assert.equal(session.value,null);assert.equal(sessionStorage.getItem(session.key),null);
+console.log('Session restore, token rotation, concurrent refresh, tab-only storage and revoked-session tests passed.');

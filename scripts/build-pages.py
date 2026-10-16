@@ -14,7 +14,7 @@ for page in json.loads((root/'content/pages.json').read_text(encoding='utf8')):
  scripts='<script src="/config.js" defer></script>'
  if page['slug'] in ('blog-2','explore'):
   body+=stories
-  scripts+='<script src="/journal.js" defer></script>'
+  scripts+='<script src="/article-media.js" defer></script><script src="/journal.js" defer></script>'
  if page['slug']=='contact':
   body+=contact
   scripts+='<script src="/contact.js" defer></script>'

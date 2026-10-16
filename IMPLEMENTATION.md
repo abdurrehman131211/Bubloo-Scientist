@@ -1,85 +1,39 @@
-# Bubloo Scientist implementation status
+# Bubloo Scientist
 
-## Connected backend
-- Project: Bubloo Scientist Website (kmruzyadvdngqsszsphw).
-- Region: ap-south-1. Creation cost quoted by Supabase: $0/month.
-- Frontend configuration uses the public publishable key. A legacy public anon JWT is used only for the contact Edge Function gateway; no server secret is committed.
-- Articles use row-level security: visitors read published articles; only administrators manage drafts and content.
-- Messages are private. Direct public inserts are revoked.
-- The deployed contact Edge Function validates submissions and uses a server-only database operation. Limits: 3 messages per normalized email per hour and 100 total per hour.
-- Security advisor: no findings at implementation time.
+Production: https://bubloo-scientist.vercel.app/
+Studio: https://bubloo-scientist.vercel.app/admin.html
+Repository: https://github.com/abdurrehman131211/Bubloo-Scientist
+Supabase project: kmruzyadvdngqsszsphw
 
-## Editor account
-The verified account for bublooscientist2023@gmail.com is the protected owner. Additional administrators are managed from Studio > Users.
-The database checks current private membership and email verification directly. Owner identity is bound to the existing authenticated account ID; pending admin grants activate only for the approved, verified email.
-User-editable metadata and claimed administrator roles cannot grant access.
+## Account management
+Public registration is closed in the interface and at the Auth database insert boundary. Only the existing owner can manage administrators in Users. Create a new account accepts an email and an initial password of at least 12 characters. The create-admin Edge Function validates the caller through Auth and checks their current owner role, then reserves a random account UUID through a service-only RPC before calling Auth Admin. A trigger consumes the matching reservation when Auth inserts the user; reservations expire after five minutes. User or app metadata cannot authorize registration. A reservation is needed because Auth applies custom app_metadata after inserting the user.
 
-Visit /admin.html and choose the Set up account tab. Enter that email, choose and confirm a password of at least 12 characters, then click Create editor account.
-Verify your email, then return and sign in. No password is stored in the source code.
-If Supabase's confirmation link redirects to its default localhost URL, return to the deployed editor after confirmation;
-configure Auth URL settings with the final deployed origin once hosting is available.
-Sessions stay in memory; sign in again after reload or token expiry.
+Account creation confirms the supplied email administratively; it does not verify mailbox ownership. The owner must verify the intended recipient and share credentials privately. New admins should change the initial password in Profile. No invitation email is sent automatically. Add existing account never changes its password and requires an existing Auth account. The protected owner cannot be removed from the UI. Membership is checked fresh against the database; removing access blocks subsequent data writes even with an unexpired token.
 
-## Reproduce backend setup
-Apply these in order to a new project:
-1. backend/schema.sql
-2. backend/contact.sql
-3. backend/privileges.sql
-4. backend/editor.sql
-5. backend/article_sources.sql
-6. backend/users.sql
-Deploy backend/functions/contact/index.ts as the contact Edge Function with JWT verification enabled.
-Update dist/config.js with that project's public keys and URL.
+## Profile and remembered sign-in
+Profile is available in the top bar and sidebar: picture, display name, private phone number, bio, email change requests and password changes. Phone is a contact field, not a verified sign-in factor. Profiles have self-only RLS, including ownership checks on updates. Avatar image URLs are public; profile details are private. Email changes use Supabase Auth confirmation, and user-ID-bound membership survives an email change. Configure production Auth Site URL/redirect URLs and custom SMTP for reliable email delivery. Confirmation delivery has not been tested here.
 
-## Validation
-- node --check passes for the frontend scripts.
-- node backend/tests/contact.mjs checks validation, honeypot, method restrictions, and rate-limit responses with a mocked upstream.
-- backend/tests/access.sql passed against the live database: public visibility, private message protection, administrator writes, and contact limits. Test fixtures were rolled back.
-- End-to-end HTTP/browser checks are unverified because the host's network access is blocked.
+Remember me is checked by default. Browser storage contains access/refresh tokens, never passwords. Refresh happens before authenticated requests and when returning to the tab. Concurrent refreshes share an operation and Web Locks coordinate tabs where supported. Unchecking Remember me uses tab session storage. Signout clears browser tokens and revokes the refresh session. Global signout revokes refresh sessions; already-issued access tokens on other devices expire normally.
 
-## Content and pages
-- Added /creative-2/, /skills/, /explore/, /learning/, /about-us/, /blog-2/, /contact/, /quiz-and-survey/.
-- Page descriptions are rewritten from the original website; they are not full archival copies.
-- Four live editorial article summaries include explicit source links and summary labels.
-- The quiz is newly written for the replica, not migrated from the original site.
-- To migrate complete articles, export WordPress Tools > Export > All content.
-- Run python scripts/import-wordpress.py export.xml output.sql, review, then apply the SQL.
-- Images and original page layouts still need a separate asset migration.
-- Run python scripts/build-pages.py after changing content/pages.json or the shared header.
+## Article pictures
+Upload up to 12 JPG, PNG, WebP or GIF pictures per article, up to 5 MB each. Add alt text and captions, choose the first image as cover, and use Insert in article to position pictures in plain text with [[image:UUID]] markers. Other images appear after the body. Preview and public readers share a safe DOM renderer with no HTML parsing. Only editors upload article images; avatar uploads are limited to 2 MB. SVG and HTML uploads are excluded. Removing a picture unlinks it; orphan uploads are not automatically garbage-collected.
 
-## Remaining work
-- The original uploaded logo is integrated into the responsive header and footer on all nine public pages. Browser visual QA remains unverified.
-- Import the complete WordPress archive; current live articles are labeled summaries.
-- The owner must choose their editor password and verify the email as above.
-- Deploy the frontend. Sites source-server DNS remains blocked.
-- Add CAPTCHA if needed for stronger abuse resistance; email/global submission limits are already active.
+## Backend setup
+The connected project already has schema.sql, editor.sql, privileges.sql, contact.sql, article_sources.sql and users.sql.
+Apply studio-settings.sql followed by provisioning.sql. Deploy backend/functions/create-admin/index.ts as create-admin with verify_jwt enabled. provisioning.sql supersedes the initial metadata guard in studio-settings.sql with a service-only reservation guard. Only public keys are in frontend config; privileged keys stay in the Edge Function environment. Contact validation and rate limits remain active.
 
-## Run locally
-python -m http.server 4173 --directory dist
+## Verification
+- node backend/tests/contact.mjs
+- node backend/tests/session.mjs
+- node backend/tests/create-admin.mjs
+- backend/tests/settings.sql and users.sql passed in the connected database with all fixtures rolled back.
+- Shipped frontend JavaScript syntax passed. DOM smoke checks passed startup, login, profile load/save, preview, selector contracts and safe image rendering.
+- Visual browser checks were unavailable because the browser runtime could not launch. Full live Auth account creation and email delivery remain unverified. Automatic approval review blocked creating a persistent QA administrator; no such account was created.
+- Security advisor reports no database findings. Existing Auth warning: leaked-password protection is disabled. https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- The local command service disconnected before commit. Sources were recovered through GitHub, the same changes reapplied, and resulting scripts checked for syntax and smoke-tested again before committing.
 
-Open http://localhost:4173. No dependency installation is needed.
-
-Figma: https://www.figma.com/design/URSxSZeUYE962Yry6zeEhK
-GitHub: https://github.com/abdurrehman131211/Bubloo-Scientist
-
-## Redesigned Admin Studio
-- Dedicated admin.css keeps the main website unchanged.
-- Separate sign-in/setup and authenticated workspace layouts.
-- Overview shows actual published, draft and message counts.
-- Articles has search, status filtering, edit and delete controls.
-- Editor includes draft/publish controls, source details, word count and a plain-text preview.
-- Messages has its own inbox view; navigation adapts to mobile screens.
-- Unsaved drafts warn before being discarded or leaving the page.
-- Script syntax and control/asset checks passed. Browser visual and end-to-end interaction checks remain unverified due to browser tooling failures.
-
-## Owner-managed Users
-- The owner can add administrator access by email, view account verification/setup status, and remove administrator access.
-- Added administrators can manage articles and contact messages but cannot list team access or grant/revoke roles.
-- Owner access cannot be removed or demoted through the UI or its RPCs.
-- No invitation email is sent. Approved teammates open /admin.html, use Set up account, verify their email, then sign in.
-- Removing access does not delete the Auth account. Database role checks take effect on subsequent requests, even with an existing access token.
-- Owner-only access history records the last 20 grant/revoke events.
-- Membership and audit tables are private, deny direct client access, and are accessed through checked private functions. Public RPC wrappers use SECURITY INVOKER.
-- backend/tests/users.sql passed against the live database; fixtures were rolled back. It tests owner protection, pending activation, verification, forbidden escalation, direct-write denial, and immediate revocation.
-- Browser visual/end-to-end checks remain unverified.
-- Supabase's security advisor reports breached-password protection disabled. Configure this in Auth settings if supported by the project's plan: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+## Content and local preview
+The supplied logo, eight content pages and four source-linked editorial summaries are integrated. Full original articles/assets still require a WordPress export.
+Run python -m http.server 4173 --directory dist.
+Run python scripts/build-pages.py after editing content/pages.json or the shared header.
+Vercel deploys the dist frontend from main.

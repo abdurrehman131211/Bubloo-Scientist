@@ -54,6 +54,7 @@ begin
  end if;
  if p_action='grant' then
   select id into target_id from auth.users where lower(email)=address;
+  if target_id is null then raise exception 'Create the account first' using errcode='22023'; end if;
   if exists(select 1 from private.studio_members where user_id=target_id and role='owner') then
    raise exception 'Owner access cannot be changed here' using errcode='22023';
   end if;
