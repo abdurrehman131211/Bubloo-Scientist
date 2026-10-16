@@ -10,16 +10,14 @@
 - Security advisor: no findings at implementation time.
 
 ## Editor account
-No editor account exists yet. Create your account with a password you choose in:
-https://supabase.com/dashboard/project/kmruzyadvdngqsszsphw/auth/users
+Editor access is restricted to the owner's chosen address: bublooscientist2023@gmail.com.
+The database checks the authenticated account ID, exact email, and email confirmation directly in auth.users.
+User-editable metadata and claimed administrator roles cannot grant access.
 
-Then run this in Supabase SQL Editor, replacing the UUID with that exact account ID:
-
-    update auth.users
-    set raw_app_meta_data = coalesce(raw_app_meta_data,'{}'::jsonb) || '{"role":"admin"}'::jsonb
-    where id = 'YOUR-ACCOUNT-UUID'::uuid;
-
-Sign in at /admin.html. Account creation and this role assignment happen in the trusted dashboard, never in public browser code.
+Visit /admin.html, enter that email, choose a password of at least 12 characters, and click Create my editor account.
+Verify your email, then return and sign in. No password is stored in the source code.
+If Supabase's confirmation link redirects to its default localhost URL, return to the deployed editor after confirmation;
+configure Auth URL settings with the final deployed origin once hosting is available.
 Sessions stay in memory; sign in again after reload or token expiry.
 
 ## Reproduce backend setup
@@ -27,6 +25,8 @@ Apply these in order to a new project:
 1. backend/schema.sql
 2. backend/contact.sql
 3. backend/privileges.sql
+4. backend/editor.sql
+5. backend/article_sources.sql
 Deploy backend/functions/contact/index.ts as the contact Edge Function with JWT verification enabled.
 Update dist/config.js with that project's public keys and URL.
 
@@ -36,10 +36,20 @@ Update dist/config.js with that project's public keys and URL.
 - backend/tests/access.sql passed against the live database: public visibility, private message protection, administrator writes, and contact limits. Test fixtures were rolled back.
 - End-to-end HTTP/browser checks are unverified because the host's network access is blocked.
 
+## Content and pages
+- Added /creative-2/, /skills/, /explore/, /learning/, /about-us/, /blog-2/, /contact/, /quiz-and-survey/.
+- Page descriptions are rewritten from the original website; they are not full archival copies.
+- Four live editorial article summaries include explicit source links and summary labels.
+- The quiz is newly written for the replica, not migrated from the original site.
+- To migrate complete articles, export WordPress Tools > Export > All content.
+- Run python scripts/import-wordpress.py export.xml output.sql, review, then apply the SQL.
+- Images and original page layouts still need a separate asset migration.
+- Run python scripts/build-pages.py after changing content/pages.json or the shared header.
+
 ## Remaining work
 - Apply the supplied logo and verify the theme: attachment download remains blocked.
-- Migrate full articles and remaining original pages. The database is intentionally not populated with invented content.
-- Create the editor account as above.
+- Import the complete WordPress archive; current live articles are labeled summaries.
+- The owner must choose their editor password and verify the email as above.
 - Deploy the frontend. Sites source-server DNS remains blocked.
 - Add CAPTCHA if needed for stronger abuse resistance; email/global submission limits are already active.
 

@@ -1,5 +1,6 @@
 -- Transactional access tests. Fixtures are rolled back.
 begin;
+insert into auth.users(id,email,email_confirmed_at) select '00000000-0000-4000-8000-000000000099','bublooscientist2023@gmail.com',now() where not exists(select 1 from auth.users where lower(email)='bublooscientist2023@gmail.com');
 insert into public.articles(id,title,category,excerpt,body,published)
 values('00000000-0000-4000-8000-000000000001','Policy test public','Physics','Test','Test',true),
 ('00000000-0000-4000-8000-000000000002','Policy test draft','Physics','Test','Test',false);
@@ -25,8 +26,8 @@ do $$declare changed integer;begin
  if (select count(*) from public.messages)<>0 then raise exception 'Nonadmin messages exposed';end if;
 end$$;
 reset role;
+select set_config('request.jwt.claims',json_build_object('role','authenticated','sub',(select id::text from auth.users where lower(email)='bublooscientist2023@gmail.com'))::text,true);
 set local role authenticated;
-select set_config('request.jwt.claims','{"role":"authenticated","app_metadata":{"role":"admin"}}',true);
 do $$declare changed integer;begin
  if (select count(*) from public.articles where id in ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002'))<>2 then raise exception 'Admin draft visibility failed';end if;
  update public.articles set title='Admin permitted' where id='00000000-0000-4000-8000-000000000002';
