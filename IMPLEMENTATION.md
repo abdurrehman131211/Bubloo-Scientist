@@ -14,7 +14,7 @@ Editor access is restricted to the owner's chosen address: bublooscientist2023@g
 The database checks the authenticated account ID, exact email, and email confirmation directly in auth.users.
 User-editable metadata and claimed administrator roles cannot grant access.
 
-Visit /admin.html, enter that email, choose a password of at least 12 characters, and click Create my editor account.
+Visit /admin.html and choose the Set up account tab. Enter that email, choose and confirm a password of at least 12 characters, then click Create editor account.
 Verify your email, then return and sign in. No password is stored in the source code.
 If Supabase's confirmation link redirects to its default localhost URL, return to the deployed editor after confirmation;
 configure Auth URL settings with the final deployed origin once hosting is available.
@@ -60,3 +60,13 @@ Open http://localhost:4173. No dependency installation is needed.
 
 Figma: https://www.figma.com/design/URSxSZeUYE962Yry6zeEhK
 GitHub: https://github.com/abdurrehman131211/Bubloo-Scientist
+
+## Redesigned Admin Studio
+- Dedicated admin.css keeps the main website unchanged.
+- Separate sign-in/setup and authenticated workspace layouts.
+- Overview shows actual published, draft and message counts.
+- Articles has search, status filtering, edit and delete controls.
+- Editor includes draft/publish controls, source details, word count and a plain-text preview.
+- Messages has its own inbox view; navigation adapts to mobile screens.
+- Unsaved drafts warn before being discarded or leaving the page.
+- Script syntax and control/asset checks passed. Browser visual and end-to-end interaction checks remain unverified due to browser tooling failures.
