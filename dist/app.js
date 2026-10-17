@@ -18,7 +18,7 @@ function render(){
 $("#topics")?.replaceChildren(...topics.slice(1,5).map((t,i)=>{const a=node("a",null,"topic");a.href="#stories";a.append(node("small","0"+(i+1)),node("span",["↗","H₂O","⌘","</>"][i],"symbol"),node("h3",t),node("p",["Understand the forces shaping our world.","Discover the science of matter.","Explore life in all its variety.","See what is possible with new ideas."][i]));a.onclick=()=>{topic=t;render()};return a}));
 $("#team-list")?.replaceChildren(...[
  ["Abdur Rehman Siddiqui","CEO","+923378324258"],
- ["Ayaan Hassan Khan","Web Developer",null],
+ ["Ayaan Hassan Khan","Web Developer","+923152946626"],
  ["Sadaat Furqan","Marketer","+923316936931"],
  ["Muhammad Mustafa Khan","Lead Designer","+923460222290"],
  ["Muhammad Huzaifa Khan","Web Designer","+923102526567"],
