@@ -44,8 +44,9 @@ window.StudioGoogle=class {
    const user=await userResponse.json();
    if(!user.email_confirmed_at||!user.identities?.some(identity=>identity.provider==='google'&&identity.identity_data?.email_verified===true&&typeof identity.identity_data.email==='string'&&identity.identity_data.email.toLowerCase()===user.email?.toLowerCase()))throw Error('Choose the Google account with your approved admin email address.');
    const roleResponse=await fetch(this.config.supabaseUrl+'/rest/v1/rpc/studio_role',{method:'POST',headers,body:'{}'});
-   const role=roleResponse.ok?await roleResponse.json():null;
-   if(!['owner','admin'].includes(role))throw Error('This Google account does not have Studio access. Ask the owner to add your email as an administrator.');
+   if(!roleResponse.ok)throw Error('Unable to check your registration. Please try again.');
+   const role=await roleResponse.json();
+   if(!['owner','admin'].includes(role))throw Error('Not registered. This email is not registered as a Studio administrator. Ask the owner to add you.');
    session.user=user;return {session,remember:pending.remember===true};
   }catch(error){
    // Revoke this rejected session; never sign out other devices.

@@ -26,9 +26,12 @@ contains setup values, never OAuth secrets.
 
 Google sign-in does not provision administrators. The owner must first create
 or approve an existing account in Users. Supabase automatically links a Google
-identity to an existing user with the same verified email. The server-side
-registration trigger blocks new, unprovisioned Auth users; the database
-membership helper and RLS reject existing accounts without admin access.
+identity to an existing user with the same verified email. Apply backend/google-auth-first.sql after provisioning.sql. The registration
+trigger permits Google Auth accounts to authenticate first, while public password
+registration stays closed. A Google Auth account is not a Studio registration.
+The database membership helper and RLS reject all accounts without admin access.
+After authentication, approved admins enter; other users see "Not registered"
+and their new local session is revoked. No public admin allowlist is exposed.
 Neither the allowlist nor a privileged key is exposed to the login page.
 
 The callback validates Auth's current user, a verified matching Google identity,

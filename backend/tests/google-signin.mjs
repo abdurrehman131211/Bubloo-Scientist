@@ -24,7 +24,7 @@ const expected=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncod
 const callback=async()=>{await google.start(true);location.href=location.origin+'/admin.html?code=test-code';calls=[];return google.finish()};
 const approved=await callback();assert.equal(approved.session.user.id,'test-id');assert.equal(approved.remember,true);assert.equal(sessionStorage.getItem(google.key),null);assert.equal(location.href,location.origin+'/admin.html');assert.equal(calls.some(c=>c.url.includes('/logout')),false);
 const exchanged=JSON.parse(calls[0].options.body);assert.equal(exchanged.auth_code,'test-code');assert.equal(exchanged.code_verifier.length,43);
-role=null;await assert.rejects(callback,/does not have Studio access/);assert.ok(calls.some(c=>c.url.endsWith('/logout?scope=local')));role='owner';
+role=null;await assert.rejects(callback,/Not registered\./);assert.ok(calls.some(c=>c.url.endsWith('/logout?scope=local')));role='owner';
 assert.equal((await callback()).session.user.id,'test-id');
 userVerified=false;await assert.rejects(callback,/approved admin email/);userVerified=true;
 googleVerified=false;await assert.rejects(callback,/approved admin email/);googleVerified=true;
