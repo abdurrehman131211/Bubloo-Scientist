@@ -37,3 +37,6 @@ The supplied logo, eight content pages and four source-linked editorial summarie
 Run python -m http.server 4173 --directory dist.
 Run python scripts/build-pages.py after editing content/pages.json or the shared header.
 Vercel deploys the dist frontend from main.
+
+## Google sign-in
+The Studio supports Google OAuth with S256 PKCE, verified matching Google email, current server-side admin membership validation, callback URL cleanup, and remembered sessions. No public signup or admin allowlist lookup was added. Google was disabled in Supabase on 17 October 2026; activation requires Google OAuth credentials and the exact redirect URLs in backend/google-signin-setup.md. The UI keeps password sign-in available and explains when Google is unavailable. Full Google consent/callback testing remains pending provider setup. Run node backend/tests/google-signin.mjs and node backend/tests/studio-ui.mjs for the automated checks.

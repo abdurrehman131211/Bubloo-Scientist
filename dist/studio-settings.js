@@ -77,4 +77,28 @@ async function restoreSession(){
 }
 window.addEventListener('storage',event=>{if(event.key!==sessionStore.key)return;if(!event.newValue){if(!localStorage.getItem(sessionStore.key)){signOut();notify('You signed out in another tab.')}}else sessionStore.restore()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStore.value)sessionStore.access().then(value=>token=value).catch(error=>{if(!sessionStore.value)signOut();notify(error.message,true)})});
-restoreSession();
+initializeStudioSignIn();
+
+async function initializeStudioSignIn(){
+ const google=new window.StudioGoogle(cfg),button=$('#google-signin'),help=$('#google-signin-help');
+ const enabledMessage='Use the Google email already approved for your Studio account.';
+ const unavailableMessage='Google sign-in is not available yet. Use your email and password.';
+ button.disabled=true;
+ button.onclick=async()=>{
+  button.disabled=true;$('#auth-submit').disabled=true;notify('Connecting to Google…');
+  try{
+   if(!await google.available())throw Error(unavailableMessage);
+   await google.start($('#login').elements.remember.checked);
+  }catch(error){notify(error.message,true);button.disabled=false;$('#auth-submit').disabled=false}
+ };
+ if(google.hasCallback()){
+  busy($('#auth-submit'),true,'Checking your Google account…');
+  try{
+   const result=await google.finish();sessionStore.save(result.session,result.remember);token=result.session.access_token;currentUser=result.session.user;
+   $('#login').elements.remember.checked=result.remember;
+   await load();$('#auth').hidden=true;$('#workspace').hidden=false;showView('overview');notify();
+  }catch(error){signOut();notify(error.message,true)}finally{busy($('#auth-submit'),false,'Sign in to Studio')}
+ }else await restoreSession();
+ try{const enabled=await google.available();button.disabled=!enabled;help.textContent=enabled?enabledMessage:unavailableMessage}
+ catch{button.disabled=false;help.textContent=enabledMessage}
+}

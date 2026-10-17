@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {webcrypto} from 'node:crypto';
+const storage=()=>{const m=new Map();return{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)}};
+let role='admin',userVerified=true,googleVerified=true,provider='google',tokenOK=true,calls=[];
+const sessionStorage=storage(),location={href:'https://bubloo-scientist.vercel.app/admin.html',origin:'https://bubloo-scientist.vercel.app',assign(url){this.assigned=url}};
+const user=()=>({id:'test-id',email:'admin@example.invalid',email_confirmed_at:userVerified?'2026-10-17':null,identities:[{provider,identity_data:{email:'admin@example.invalid',email_verified:googleVerified}}]});
+const context={window:{location,history:{replaceState(_s,_t,path){location.href=location.origin+path}}},URL,URLSearchParams,TextEncoder,Uint8Array,btoa,crypto:webcrypto,sessionStorage,Date,JSON,Error,fetch:async(url,options={})=>{
+ calls.push({url,options});let data,status=200;
+ if(url.endsWith('/settings'))data={external:{google:true}};
+ else if(url.includes('grant_type=pkce')){status=tokenOK?200:400;data={access_token:'test-access',refresh_token:'test-refresh',expires_in:3600}}
+ else if(url.endsWith('/user'))data=user();
+ else if(url.endsWith('/studio_role'))data=role;
+ else data={};
+ return {ok:status===200,status,json:async()=>data};
+}};
+vm.runInNewContext(fs.readFileSync('dist/studio-google.js','utf8'),context);
+const google=new context.window.StudioGoogle({supabaseUrl:'https://auth.example.invalid',publishableKey:'public'});
+assert.equal(await google.available(),true);
+await google.start(false);const authURL=new URL(location.assigned),pending=JSON.parse(sessionStorage.getItem(google.key));
+assert.equal(authURL.searchParams.get('provider'),'google');assert.equal(authURL.searchParams.get('prompt'),'select_account');assert.equal(authURL.searchParams.get('redirect_to'),location.origin+'/admin.html');assert.equal(authURL.searchParams.get('code_challenge_method'),'s256');assert.equal(pending.verifier.length,43);assert.equal(pending.remember,false);
+const expected=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(pending.verifier))).toString('base64url');assert.equal(authURL.searchParams.get('code_challenge'),expected);
+const callback=async()=>{await google.start(true);location.href=location.origin+'/admin.html?code=test-code';calls=[];return google.finish()};
+const approved=await callback();assert.equal(approved.session.user.id,'test-id');assert.equal(approved.remember,true);assert.equal(sessionStorage.getItem(google.key),null);assert.equal(location.href,location.origin+'/admin.html');assert.equal(calls.some(c=>c.url.includes('/logout')),false);
+const exchanged=JSON.parse(calls[0].options.body);assert.equal(exchanged.auth_code,'test-code');assert.equal(exchanged.code_verifier.length,43);
+role=null;await assert.rejects(callback,/does not have Studio access/);assert.ok(calls.some(c=>c.url.endsWith('/logout?scope=local')));role='owner';
+assert.equal((await callback()).session.user.id,'test-id');
+userVerified=false;await assert.rejects(callback,/approved admin email/);userVerified=true;
+googleVerified=false;await assert.rejects(callback,/approved admin email/);googleVerified=true;
+provider='email';await assert.rejects(callback,/approved admin email/);provider='google';
+await google.start(true);const old=JSON.parse(sessionStorage.getItem(google.key));old.created=Date.now()-600001;sessionStorage.setItem(google.key,JSON.stringify(old));location.href=location.origin+'/admin.html?code=expired';calls=[];await assert.rejects(()=>google.finish(),/expired/);assert.equal(calls.length,0);
+location.href=location.origin+'/admin.html?code=unsolicited';calls=[];await assert.rejects(()=>google.finish(),/expired/);assert.equal(calls.length,0);
+await google.start(true);location.href=location.origin+'/admin.html#error=access_denied&error_description=untrusted';calls=[];await assert.rejects(()=>google.finish(),/could not be completed/);assert.equal(location.href,location.origin+'/admin.html');assert.equal(calls.length,0);
+tokenOK=false;await assert.rejects(callback,/could not be completed/);assert.equal(calls.length,1);
+console.log('Google OAuth tests passed: S256 PKCE, approved owner/admin, denial/revocation, verified matching identity, URL cleanup, expiry, missing verifier, provider errors and failed exchange.');
