@@ -21,8 +21,13 @@ for page in json.loads((root/'content/pages.json').read_text(encoding='utf8')):
  if page['slug']=='quiz-and-survey':
   body+='<section aria-label="Published quizzes"><p id="quiz-status" class="quiz-status" role="status" aria-live="polite"></p><div id="published-quizzes" class="published-quizzes"></div></section><section id="quiz-detail" class="quiz-detail" hidden><h2 id="quiz-title"></h2><p id="quiz-description"></p><form id="quiz"></form><div id="quiz-result" role="status" aria-live="polite"></div></section>'
   scripts+='<script src="/quiz.js" defer></script>'
- if page["slug"]!="quiz-and-survey": body+='<section class="source-note"><p>Adapted from the original Bubloo Scientist website.</p><a href="'+escape(page['source'])+'">Visit the original page ↗</a></section>'
+ if page['slug']=='projects':
+  body+='<section aria-label="Published projects"><p id="project-status" class="project-status" role="status" aria-live="polite"></p><div id="project-list" class="project-grid"></div></section><section id="project-detail" class="project-detail" hidden><a href="/projects/">← All projects</a><p id="project-meta" class="eyebrow"></p><h2 id="project-title"></h2><p id="project-summary"></p><div id="project-body" class="project-body"></div><div id="project-links" class="project-links"></div></section>'
+  scripts+='<script src="/article-media.js" defer></script><script src="/projects.js" defer></script>'
+ if page["slug"] not in ("quiz-and-survey","projects"): body+='<section class="source-note"><p>Adapted from the original Bubloo Scientist website.</p><a href="'+escape(page['source'])+'">Visit the original page ↗</a></section>'
  html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(page['label'].title())+' — Bubloo Scientist</title><meta name="description" content="'+escape(page['intro'])+'"><link rel="stylesheet" href="/style.css">'+scripts+'</head><body><a class="skip" href="#main">Skip to content</a>'+header+'<main id="main">'+body+'</main>'+footer+(reader if page['slug'] in ('blog-2','explore') else '')+'</body></html>'
+ if page['slug']=='projects': html=html.replace('</head>','<link rel="stylesheet" href="/projects.css"></head>')
  html=html.replace('href="#main"','href="/"').replace('href="#contact"','href="/contact/"').replace('href="admin.html"','href="/admin.html"').replace('<a class="skip" href="/">','<a class="skip" href="#main">')
  target=root/'dist'/page['slug'];target.mkdir(exist_ok=True);(target/'index.html').write_text(html,encoding='utf8')
-print('Generated 8 content pages.')
+print('Generated '+str(len(json.loads((root/'content/pages.json').read_text(encoding='utf8'))))+' content pages.')
+

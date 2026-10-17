@@ -145,5 +145,12 @@
     "intro": "Explore our latest quizzes, test your understanding and learn from each answer.",
     "source": "https://www.bublooscientist.com/quiz-and-survey/",
     "sections": []
+  },
+  {
+    "slug": "projects",
+    "label": "Projects",
+    "title": "Curiosity, put into practice.",
+    "intro": "Explore the projects we are planning, building and sharing. Follow the process, discover the results, and see what comes next.",
+    "sections": []
   }
 ]

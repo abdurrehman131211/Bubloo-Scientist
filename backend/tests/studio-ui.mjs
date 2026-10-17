@@ -10,10 +10,10 @@ for(const match of html.matchAll(/<form\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/form>/g
 elements.get('#workspace').hidden=true;
 const storage=()=>{const m=new Map();return{getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)}};
 const profile={user_id:'00000000-0000-4000-8000-000000000086',display_name:'Test editor',phone:'+123',bio:'Test',avatar_path:''};
-let writes=0,quizzes=[];const replies=path=>path.includes('grant_type=password')?{access_token:'token',refresh_token:'refresh',expires_in:3600,user:{id:profile.user_id,email:'editor@example.invalid'}}:path.endsWith('/studio_role')?'owner':path.includes('/studio_users')?{users:[],events:[]}:path.endsWith('/auth/v1/user')?{id:profile.user_id,email:'editor@example.invalid'}:path.includes('/studio_profiles')?[profile]:path.includes('/rest/v1/quizzes')?quizzes:[];
+let writes=0,quizzes=[],projects=[];const replies=path=>path.includes('grant_type=password')?{access_token:'token',refresh_token:'refresh',expires_in:3600,user:{id:profile.user_id,email:'editor@example.invalid'}}:path.endsWith('/studio_role')?'owner':path.includes('/studio_users')?{users:[],events:[]}:path.endsWith('/auth/v1/user')?{id:profile.user_id,email:'editor@example.invalid'}:path.includes('/studio_profiles')?[profile]:path.includes('/rest/v1/quizzes')?quizzes:path.includes('/rest/v1/projects')?projects:[];
 const document={querySelector:s=>{assert.ok(elements.has(s),'Missing selector '+s);return elements.get(s)},querySelectorAll:()=>[],createElement:()=>new Element(),addEventListener(){}};
-const context={URL,URLSearchParams,TextEncoder,btoa,atob,window:{location:{href:'https://test.invalid/admin.html',origin:'https://test.invalid'},history:{replaceState(){}},SITE_CONFIG:{supabaseUrl:'https://test.invalid',publishableKey:'public'},addEventListener(){}},document,localStorage:storage(),sessionStorage:storage(),navigator:{},crypto:webcrypto,Date,JSON,Error,console,confirm:()=>true,fetch:async(url,options)=>{if(options?.method==='POST'&&url.includes('/rest/v1/quizzes')){quizzes=[{id:'quiz-test',created_at:'2026-10-17',updated_at:'2026-10-17',...JSON.parse(options.body)}]};if(options?.method==='POST'&&url.includes('/studio_profiles'))writes++;return {ok:true,status:200,text:async()=>JSON.stringify(replies(url)),json:async()=>replies(url)}}};
-vm.createContext(context);for(const name of ['studio-session.js','studio-phone.js','studio-google.js','article-media.js','admin.js','admin-quizzes.js','studio-phone-ui.js','studio-settings.js'])vm.runInContext(fs.readFileSync('dist/'+name,'utf8'),context,{filename:name});
+const context={URL,URLSearchParams,TextEncoder,btoa,atob,window:{location:{href:'https://test.invalid/admin.html',origin:'https://test.invalid'},history:{replaceState(){}},SITE_CONFIG:{supabaseUrl:'https://test.invalid',publishableKey:'public'},addEventListener(){}},document,localStorage:storage(),sessionStorage:storage(),navigator:{},crypto:webcrypto,Date,JSON,Error,console,confirm:()=>true,fetch:async(url,options)=>{if(options?.method==='POST'&&url.includes('/rest/v1/quizzes')){quizzes=[{id:'quiz-test',created_at:'2026-10-17',updated_at:'2026-10-17',...JSON.parse(options.body)}]};if(['POST','PATCH'].includes(options?.method)&&url.includes('/rest/v1/projects')){projects=[{id:'project-test',updated_at:'2026-10-17',...JSON.parse(options.body)}]};if(options?.method==='POST'&&url.includes('/studio_profiles'))writes++;return {ok:true,status:200,text:async()=>JSON.stringify(replies(url)),json:async()=>replies(url)}}};
+vm.createContext(context);for(const name of ['studio-session.js','studio-phone.js','studio-google.js','article-media.js','admin.js','admin-quizzes.js','admin-projects.js','studio-phone-ui.js','studio-settings.js'])vm.runInContext(fs.readFileSync('dist/'+name,'utf8'),context,{filename:name});
 assert.equal(html.includes('setup-tab'),false);assert.equal(html.includes('/auth/v1/signup'),false);
 const login=elements.get('#login');login.elements.email.value='editor@example.invalid';login.elements.password.value='password';login.elements.remember.checked=true;
 await login.onsubmit({preventDefault(){},currentTarget:login});
@@ -31,6 +31,14 @@ await quizForm.onsubmit({preventDefault(){},currentTarget:quizForm});assert.equa
 console.log('Studio quiz builder: initial question, title/description, answer selection, publish save and returned ID passed.');
 
 // A phone/password session must stay out of the workspace until WhatsApp succeeds.
+const projectForm=elements.get('#project-editor');
+for(const [key,value] of Object.entries({project_title:'New project',project_category:'Physics',project_summary:'Short intro',project_details:'Full explanation',project_status:'in_progress',project_repo_url:'',project_demo_url:'https://example.com'}))projectForm.elements[key].value=value;
+projectForm.elements.project_published.checked=false;
+await projectForm.onsubmit({preventDefault(){},currentTarget:projectForm});assert.equal(projects.length,1);assert.equal(projects[0].published,false);assert.equal(projectForm.elements.project_id.value,'project-test');
+projectForm.elements.project_published.checked=true;await projectForm.onsubmit({preventDefault(){},currentTarget:projectForm});assert.equal(projects[0].published,true);
+elements.get('#preview-project').onclick();assert.equal(elements.get('#project-preview').open,true);assert.equal(elements.get('#project-preview-title').textContent,'New project');
+const prior=JSON.stringify(projects);projectForm.elements.project_repo_url.value='javascript:alert(1)';await projectForm.onsubmit({preventDefault(){},currentTarget:projectForm});assert.equal(JSON.stringify(projects),prior);
+console.log('Studio projects: draft save, returned ID, publish update, preview and unsafe-link rejection passed.');
 const originalFetch=context.fetch;let rejectCode=true;
 const mfaToken=aal=>'header.'+Buffer.from(JSON.stringify({aal})).toString('base64url')+'.signature';
 context.fetch=async(url,options)=>{
@@ -49,3 +57,4 @@ elements.get('#whatsapp-code').value='123456';await elements.get('#whatsapp-form
 rejectCode=false;await elements.get('#whatsapp-form').onsubmit({preventDefault(){}});await pendingLogin;
 assert.equal(elements.get('#workspace').hidden,false);assert.equal(elements.get('#whatsapp-dialog').open,false);assert.equal(vm.runInContext('sessionStore.value.refresh_token',context),'verified-refresh');
 console.log('Phone login UI: no workspace or persistence before WhatsApp, invalid-code retry, then verified session entry passed.');
+

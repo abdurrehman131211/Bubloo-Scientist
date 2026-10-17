@@ -1,8 +1,8 @@
 "use strict";
 function renderArticleBody(container,body,images){window.StudioMedia.render(container,body,images)}
 async function uploadImage(file,bucket){
- const types={'image/jpeg':'jpg','image/png':'png','image/webp':'webp',...(bucket==='article-images'?{'image/gif':'gif'}:{})};
- if(!types[file.type]||file.size>(bucket==='article-images'?5:2)*1024*1024)throw Error('Choose a supported image within the size limit.');
+ const types={'image/jpeg':'jpg','image/png':'png','image/webp':'webp',...(['article-images','project-images'].includes(bucket)?{'image/gif':'gif'}:{})};
+ if(!types[file.type]||file.size>(['article-images','project-images'].includes(bucket)?5:2)*1024*1024)throw Error('Choose a supported image within the size limit.');
  token=await sessionStore.access();if(!currentUser?.id)throw Error('Sign in to upload a picture.');
  const id=crypto.randomUUID(),path=currentUser.id+'/'+id+'.'+types[file.type];
  const response=await fetch(cfg.supabaseUrl+'/storage/v1/object/'+bucket+'/'+path,{method:'POST',headers:{apikey:cfg.publishableKey,Authorization:'Bearer '+token,'Content-Type':file.type,'x-upsert':'false'},body:file});
@@ -102,3 +102,4 @@ async function initializeStudioSignIn(){
  try{const enabled=await google.available();button.disabled=!enabled;help.textContent=enabled?enabledMessage:unavailableMessage}
  catch{button.disabled=false;help.textContent=enabledMessage}
 }
+

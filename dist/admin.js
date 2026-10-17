@@ -8,6 +8,7 @@ const views={
  overview:["Your ideas, ready to share.","A little overview of what you’re creating."],
  articles:["Your curiosity journal.","Find, edit and organise the stories you share."],
  editor:["Make room for a new idea.","Write at your own pace. Publish when you’re ready."],
+ projects:["Ideas becoming discoveries.","Document your projects, track progress and publish your work."],
  quizzes:["Make learning a little more curious.","Create quizzes, choose answers and publish for your readers."],
  messages:["A conversation starts here.","Questions, ideas and feedback from your readers."],
  profile:["Make yourself at home.","Your details, picture and sign-in settings."],
@@ -40,7 +41,7 @@ function showView(name){
  document.querySelectorAll("[data-view]").forEach(button=>{if(button.dataset.view===name)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current")});
  $("#view-title").textContent=views[name][0];$("#view-description").textContent=views[name][1];
  $("#breadcrumb").textContent="/ "+(name==="editor"?"Write an article":name[0].toUpperCase()+name.slice(1));
- $("#new-article").hidden=["editor","users","profile","quizzes"].includes(name);
+ $("#new-article").hidden=["editor","users","profile","quizzes","projects"].includes(name);
 }
 function badge(published){return text("span",published?"Published":"Draft","badge"+(published?" published":""))}
 function updateWordCount(){const value=$("#editor").elements.body.value.trim();$("#word-count").textContent=(value?value.split(/\s+/u).length:0)+" words"}
@@ -93,11 +94,12 @@ async function load(){
  if(accountRole!=="owner"&&!$("#view-users").hidden)showView("overview");
  $("#account-role").textContent=accountRole==="owner"?"Owner":"Admin";
  const data=await Promise.all([api("/rest/v1/articles?select=*&order=created_at.desc"),api("/rest/v1/messages?select=*&order=created_at.desc"),accountRole==="owner"?api("/rest/v1/rpc/studio_users",{method:"POST",body:"{}"}):Promise.resolve({users:[],events:[]})]);
- articles=data[0]||[];messages=data[1]||[];userAccess=data[2];render();renderUsers();await loadProfile();await loadQuizzes();
+ articles=data[0]||[];messages=data[1]||[];userAccess=data[2];render();renderUsers();await loadProfile();await loadQuizzes();await loadProjects();
 }
 function signOut(){
  resetPhoneSecurity();
  resetQuizzes();
+ resetProjects();
  sessionStore.clear();currentUser=null;profile={};articleImages=[];token="";articles=[];messages=[];accountRole="";userAccess={users:[],events:[]};dirty=false;$("#workspace").hidden=true;$("#auth").hidden=false;$("#editor").reset();$("#login").elements.password.value="";
  $("#users-list").replaceChildren();$("#access-log").replaceChildren();$("#add-admin").reset();
  ["#article-list","#messages","#recent-articles"].forEach(selector=>$(selector).replaceChildren());$("#status").textContent="";updateWordCount();
@@ -133,7 +135,7 @@ $("#editor").onsubmit=async event=>{
 };
 $("#preview-article").onclick=()=>{const form=$("#editor");$("#preview-category").textContent=form.elements.category.value||"ARTICLE PREVIEW";$("#preview-title").textContent=form.elements.title.value||"Your article title";$("#preview-excerpt").textContent=form.elements.excerpt.value;$("#preview-body").textContent=form.elements.body.value||"Your article text will appear here.";renderArticleBody($("#preview-body"),form.elements.body.value,articleImages);$("#article-preview").showModal()};
 $("#close-preview").onclick=()=>$("#article-preview").close();
-window.addEventListener("beforeunload",event=>{if(dirty||quizDirty){event.preventDefault();event.returnValue=""}});
+window.addEventListener("beforeunload",event=>{if(dirty||quizDirty||projectDirty||projectUploading){event.preventDefault();event.returnValue=""}});
 function renderUsers(){
  if(accountRole!=="owner")return;
  $("#users-count-nav").textContent=userAccess.users.length;
@@ -166,4 +168,5 @@ $("#add-admin").onsubmit=async event=>{
 };
 $("#refresh-users").onclick=async()=>{const button=$("#refresh-users");busy(button,true,"Refreshing…");try{await load();notify("Team access refreshed.")}catch(error){notify(error.message,true)}finally{busy(button,false,"Refresh")}};
 updateWordCount();
+
 
