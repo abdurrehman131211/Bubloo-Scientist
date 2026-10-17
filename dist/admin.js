@@ -28,7 +28,7 @@ async function api(path,options={},retry=true){
   if(data?.code==="email_not_confirmed")throw Error("Please verify your email before signing in.");
   if(response.status===429)throw Error("Too many attempts. Please wait a moment and try again.");
   if(path.startsWith("/auth/v1/token"))throw Error("We couldn’t sign you in. Check your email and password.");
-  if(path==="/functions/v1/create-admin"&&typeof data?.message==="string")throw Error(data.message);
+  if(path.startsWith("/functions/v1/")&&typeof data?.message==="string")throw Error(data.message);
   throw Error("This request could not be completed. Check your connection and try again.");
  }
  return data;
@@ -96,6 +96,7 @@ async function load(){
  articles=data[0]||[];messages=data[1]||[];userAccess=data[2];render();renderUsers();await loadProfile();await loadQuizzes();
 }
 function signOut(){
+ resetPhoneSecurity();
  resetQuizzes();
  sessionStore.clear();currentUser=null;profile={};articleImages=[];token="";articles=[];messages=[];accountRole="";userAccess={users:[],events:[]};dirty=false;$("#workspace").hidden=true;$("#auth").hidden=false;$("#editor").reset();$("#login").elements.password.value="";
  $("#users-list").replaceChildren();$("#access-log").replaceChildren();$("#add-admin").reset();
@@ -105,9 +106,9 @@ $("#toggle-password").onclick=()=>{const input=$("#password"),show=input.type===
 $("#login").onsubmit=async event=>{
  event.preventDefault();const form=event.currentTarget,button=$("#auth-submit");busy(button,true,"Signing in…");notify();
  try{
-  const data=await api("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify({email:form.elements.email.value.trim(),password:form.elements.password.value})});
-  sessionStore.save(data,form.elements.remember.checked);token=data.access_token;currentUser=data.user;
-  await load();$("#auth").hidden=true;$("#workspace").hidden=false;form.elements.password.value="";showView("overview");notify();
+  const phoneLogin=$('#login-method').value==='phone';
+  const data=phoneLogin?await phoneAuth.password(form.elements.login_phone.value,form.elements.password.value):await api("/auth/v1/token?grant_type=password",{method:"POST",body:JSON.stringify({email:form.elements.email.value.trim(),password:form.elements.password.value})});
+  form.elements.password.value='';await finishStudioSignIn(data,form.elements.remember.checked,{phoneLogin});
  }catch(error){if(!sessionStore.value)token="";notify(error.message||"Unable to connect. Please try again.",true)}finally{busy(button,false,"Sign in to Studio")}
 };
 async function logout(){try{await api("/auth/v1/logout",{method:"POST"})}catch{}finally{signOut();notify("You’ve signed out.")}}

@@ -35,6 +35,7 @@ function renderProfile(){
   const target=$(selector),url=window.StudioMedia.url('studio-avatars',profile.avatar_path);target.replaceChildren();
   if(url){const img=document.createElement('img');img.src=url;img.alt='Your profile picture';target.append(img)}else target.textContent=initials;
  }
+ renderPhoneSecurity();
  $('#current-email').textContent='Current email: '+currentUser.email+(currentUser.new_email?' · Pending change: '+currentUser.new_email:'');
 }
 async function loadProfile(){
@@ -72,7 +73,7 @@ $('#logout-all').onclick=async()=>{
 };
 async function restoreSession(){
  if(!sessionStore.restore())return;busy($('#auth-submit'),true,'Restoring your session…');
- try{token=await sessionStore.access();if(!token)return;await load();$('#auth').hidden=true;$('#workspace').hidden=false;showView('overview');notify()}
+ try{token=await sessionStore.access();if(!token)return;await finishStudioSignIn(sessionStore.value,sessionStore.persistent)}
  catch(error){notify(error.message,true)}finally{busy($('#auth-submit'),false,'Sign in to Studio')}
 }
 window.addEventListener('storage',event=>{if(event.key!==sessionStore.key)return;if(!event.newValue){if(!localStorage.getItem(sessionStore.key)){signOut();notify('You signed out in another tab.')}}else sessionStore.restore()});
@@ -94,9 +95,8 @@ async function initializeStudioSignIn(){
  if(google.hasCallback()){
   busy($('#auth-submit'),true,'Checking your Google account…');
   try{
-   const result=await google.finish();sessionStore.save(result.session,result.remember);token=result.session.access_token;currentUser=result.session.user;
-   $('#login').elements.remember.checked=result.remember;
-   await load();$('#auth').hidden=true;$('#workspace').hidden=false;showView('overview');notify();
+   const result=await google.finish();$('#login').elements.remember.checked=result.remember;
+   await finishStudioSignIn(result.session,result.remember);
   }catch(error){signOut();notify(error.message,true)}finally{busy($('#auth-submit'),false,'Sign in to Studio')}
  }else await restoreSession();
  try{const enabled=await google.available();button.disabled=!enabled;help.textContent=enabled?enabledMessage:unavailableMessage}

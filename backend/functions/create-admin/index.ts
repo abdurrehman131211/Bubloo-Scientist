@@ -13,12 +13,14 @@ Deno.serve(async(req:Request)=>{
   if(!user.ok)return reply(401,'Your session has expired.');
   const access=await fetch(url+'/rest/v1/rpc/studio_role',{method:'POST',headers:callerHeaders,body:'{}'});
   if(!access.ok||await access.json()!=='owner')return reply(403,'Only the owner can create administrators.');
+  const security=await fetch(url+'/rest/v1/rpc/editor_access',{method:'POST',headers:callerHeaders,body:'{}'});
+  if(!security.ok||await security.json()!==true)return reply(403,'Complete your WhatsApp verification before managing administrators.');
   if(Number(req.headers.get('content-length')||0)>4096)return reply(413,'Request too large.');
   const raw=await req.text();if(raw.length>4096)return reply(413,'Request too large.');
   let input;try{input=JSON.parse(raw)}catch{return reply(400,'Invalid request.');}
   const email=typeof input.email==='string'?input.email.trim().toLowerCase():'';
   const password=typeof input.password==='string'?input.password:'';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||password.length<12||password.length>128)return reply(400,'Enter a valid email and a password of 12-128 characters.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||password.length<12||password.length>128)return reply(400,'Enter a valid email and a password of 12–128 characters.');
   const serviceHeaders={apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};
   const id=crypto.randomUUID();
   const reserve=await fetch(url+'/rest/v1/rpc/prepare_studio_account',{method:'POST',headers:serviceHeaders,body:JSON.stringify({p_id:id,p_email:email})});
